@@ -1272,6 +1272,8 @@ void wxGameList::OnMouseMove(wxMouseEvent& event)
 	m_tooltip_timer->Stop();
 	m_tooltip_timer->StartOnce(250);
 	m_mouse_position = event.GetPosition();
+	// let the native list view see the mouse move too, otherwise its hot-item highlight is never updated/cleared
+	event.Skip();
 }
 
 void wxGameList::OnLeaveWindow(wxMouseEvent& event)
