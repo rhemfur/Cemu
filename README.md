@@ -1,4 +1,10 @@
-# **Cemu - Wii U emulator**
+# **Cemu - Wii U emulator (unofficial Windows ARM64 fork)**
+
+> **This is an unofficial, independent fork of [cemu-project/Cemu](https://github.com/cemu-project/Cemu). It is not affiliated with or endorsed by the Cemu project.**
+> It adds native Windows on ARM64 (Snapdragon) support and is distributed under the same MPL-2.0 license.
+> **The ARM64 changes in this fork were written with an AI assistant (Claude)**, directed and tested by the fork maintainer. That is why they were not submitted upstream: the Cemu project only accepts human-written code from new contributors.
+> Please do not report issues from this fork to the official Cemu project. Build steps: see [BUILD.md](BUILD.md#windows-on-arm64-snapdragon).
+> Known issues on Snapdragon X (Adreno X1-85): Xenoblade Chronicles X and Yoshi's Woolly World show graphical glitches on Vulkan (driver reports `VK_ERROR_UNKNOWN` on some pipelines); OpenGL is only a Mesa-over-D3D12 layer there and works worse.
 
 [![Build Process](https://github.com/cemu-project/Cemu/actions/workflows/build.yml/badge.svg)](https://github.com/cemu-project/Cemu/actions/workflows/build.yml)
 [![Discord](https://img.shields.io/discord/286429969104764928?label=Cemu&logo=discord&logoColor=FFFFFF)](https://discord.gg/5psYsup)
