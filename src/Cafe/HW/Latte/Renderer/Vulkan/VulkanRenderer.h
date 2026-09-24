@@ -559,6 +559,7 @@ private:
 
 	// draw synchronization helper
 	void sync_inputTexturesChanged(bool withinFeedbackLoopRenderPass = false);
+	bool sync_inputTexturesRequireBarrier() const;
 	void sync_RenderPassLoadTextures(CachedFBOVk* fboVk);
 	void sync_RenderPassStoreTextures(CachedFBOVk* fboVk);
 

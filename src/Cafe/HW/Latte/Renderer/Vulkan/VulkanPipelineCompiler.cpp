@@ -1010,6 +1010,8 @@ bool PipelineCompiler::Compile(bool forceCompile, bool isRenderThread, bool show
 		const void* const originalNext = pipelineInfo.pNext;
 		rasterizer.rasterizerDiscardEnable = VK_TRUE;
 		pipelineInfo.stageCount = 1; // the vertex stage is always first
+		if (vkRenderer->m_featureControl.deviceExtensions.pipeline_feedback)
+			creationFeedbackInfo.pipelineStageCreationFeedbackCount = 1; // must match stageCount
 		for (int attempt = 0; attempt < 2 && result != VK_SUCCESS; attempt++)
 		{
 			pipelineInfo.pNext = attempt == 0 ? originalNext : nullptr; // second attempt also drops the optional robustness/feedback structs
@@ -1029,6 +1031,8 @@ bool PipelineCompiler::Compile(bool forceCompile, bool isRenderThread, bool show
 		}
 		pipelineInfo.pNext = originalNext;
 		pipelineInfo.stageCount = 2;
+		if (vkRenderer->m_featureControl.deviceExtensions.pipeline_feedback)
+			creationFeedbackInfo.pipelineStageCreationFeedbackCount = 2;
 		rasterizer.rasterizerDiscardEnable = originalDiscard;
 	}
 

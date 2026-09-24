@@ -1084,6 +1084,23 @@ void VulkanRenderer::sync_inputTexturesChanged(bool withinFeedbackLoopRenderPass
 	}
 }
 
+// side-effect free variant of the check in sync_inputTexturesChanged: would binding the current descriptor sets require a barrier?
+bool VulkanRenderer::sync_inputTexturesRequireBarrier() const
+{
+	auto writtenInCurrentFlush = [this](const auto* descriptorSet) -> bool
+	{
+		if (!descriptorSet)
+			return false;
+		for (auto& tex : descriptorSet->list_fboCandidates)
+		{
+			if (tex->m_vkFlushIndex_write == m_state.currentFlushIndex)
+				return true;
+		}
+		return false;
+	};
+	return writtenInCurrentFlush(m_state.activeVertexDS) || writtenInCurrentFlush(m_state.activeGeometryDS) || writtenInCurrentFlush(m_state.activePixelDS);
+}
+
 void VulkanRenderer::sync_RenderPassLoadTextures(CachedFBOVk* fboVk)
 {
 	bool readFlushRequired = false;
@@ -1214,7 +1231,12 @@ void VulkanRenderer::draw_setRenderPass()
 	bool selfDependencyNeedsPassSplit = currentSelfDependencyInfo.HasSelfDependency() && !feedbackLoopHandlesSelfDependency;
 	bool overridePassReuse = selfDependencyNeedsPassSplit && (GetConfig().vk_accurate_barriers || m_state.activePipelineInfo->neverSkipAccurateBarrier);
 
-	if (!overridePassReuse && m_state.activeRenderpassFBO == fboVk)
+	// A pipeline barrier inside a render pass is only valid if the render pass has a self-dependency (feedback loop). Without one, the barrier is
+	// invalid and tile-based GPUs (e.g. Qualcomm Adreno) do not honor it, so a draw may read a texture before the previous pass finished writing it.
+	// If the newly bound descriptors require a barrier, split the render pass so that the barrier is emitted outside of it.
+	const bool barrierWouldBeInsidePass = m_state.descriptorSetsChanged && !feedbackLoopHandlesSelfDependency && sync_inputTexturesRequireBarrier();
+
+	if (!overridePassReuse && !barrierWouldBeInsidePass && m_state.activeRenderpassFBO == fboVk)
 	{
 		if (m_state.descriptorSetsChanged || feedbackLoopHandlesSelfDependency)
 			sync_inputTexturesChanged(feedbackLoopHandlesSelfDependency);
