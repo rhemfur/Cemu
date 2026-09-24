@@ -1000,6 +1000,38 @@ bool PipelineCompiler::Compile(bool forceCompile, bool isRenderThread, bool show
 		retryCount++;
 	}
 
+	if (result != VK_SUCCESS && result != VK_ERROR_PIPELINE_COMPILE_REQUIRED_EXT && inputAssembly.topology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST && m_vkPixelShader && pipelineInfo.stageCount == 2)
+	{
+		// Qualcomm Adreno (Windows) rejects point-list pipelines (VK_ERROR_UNKNOWN) when the vertex shader writes to a storage buffer
+		// (streamout emulation) and a fragment shader is attached. Such draws only produce data, so retry without rasterization and
+		// without the fragment stage. This only runs after the driver already refused the original pipeline.
+		static std::atomic<uint32> s_fallbackLogCount{0};
+		const VkBool32 originalDiscard = rasterizer.rasterizerDiscardEnable;
+		const void* const originalNext = pipelineInfo.pNext;
+		rasterizer.rasterizerDiscardEnable = VK_TRUE;
+		pipelineInfo.stageCount = 1; // the vertex stage is always first
+		for (int attempt = 0; attempt < 2 && result != VK_SUCCESS; attempt++)
+		{
+			pipelineInfo.pNext = attempt == 0 ? originalNext : nullptr; // second attempt also drops the optional robustness/feedback structs
+			VkPipeline fallbackPipeline = VK_NULL_HANDLE;
+			std::shared_lock lock(vkRenderer->m_pipeline_cache_save_mutex);
+			const VkResult fallbackResult = vkCreateGraphicsPipelines(vkRenderer->m_logicalDevice, vkRenderer->m_pipeline_cache, 1, &pipelineInfo, nullptr, &fallbackPipeline);
+			lock.unlock();
+			if (fallbackResult == VK_SUCCESS)
+			{
+				result = fallbackResult;
+				pipeline = fallbackPipeline;
+				if (attempt == 1)
+					creationFeedback.flags = 0; // feedback struct was not chained
+				if (s_fallbackLogCount.fetch_add(1) < 3)
+					cemuLog_log(LogType::Force, "Point-list pipeline was rejected by the driver, using fallback without rasterization and fragment shader (original rasterizerDiscard={})", (sint32)originalDiscard);
+			}
+		}
+		pipelineInfo.pNext = originalNext;
+		pipelineInfo.stageCount = 2;
+		rasterizer.rasterizerDiscardEnable = originalDiscard;
+	}
+
 	if (result == VK_ERROR_PIPELINE_COMPILE_REQUIRED_EXT)
 	{
 		return false;
@@ -1010,7 +1042,8 @@ bool PipelineCompiler::Compile(bool forceCompile, bool isRenderThread, bool show
 	}
 	else
 	{
-		cemuLog_log(LogType::Force, "Failed to create graphics pipeline. Error {}", (sint32)result);
+		cemuLog_log(LogType::Force, "Failed to create graphics pipeline. Error {} (stages={} geometry={} topology={} discard={})",
+			(sint32)result, pipelineInfo.stageCount, m_vkGeometryShader != nullptr, (sint32)inputAssembly.topology, (sint32)rasterizer.rasterizerDiscardEnable);
 		cemu_assert_debug(false);
 		return true; // true indicates that caller should no longer attempt to compile this pipeline again
 	}
