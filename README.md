@@ -44,8 +44,11 @@ To compile Cemu yourself on Windows, Linux or macOS, view [BUILD.md](/BUILD.md).
 
 ## Issues
 
-Issues with the emulator should be filed using [GitHub Issues](https://github.com/cemu-project/Cemu/issues).  
-The old bug tracker can be found at [bugs.cemu.info](https://bugs.cemu.info) and still contains relevant issues and feature suggestions.
+Issues specific to this unofficial Windows ARM64 fork should be reported in [this repository's GitHub Issues](https://github.com/rhemfur/Cemu/issues).
+
+Please do **not** report fork-specific Windows ARM64, Snapdragon or Adreno issues to the official Cemu project. If a problem also occurs on an unmodified official Cemu build, use the official project's issue tracker instead.
+
+Pull requests, testing results and technical investigation related to the Windows ARM64 fork are welcome.
 
 ## Contributing
 
